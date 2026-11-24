@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cover Lab</title>
+<style>
+:root{--bg:#090908;--panel:#0f0f0d;--line:#262520;--ink:#e9e2cf;--dim:#8d8775;--red:#cf1620;--blue:#2a2ae0;--mono:Menlo,Monaco,"Courier New",monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.45 var(--mono)}
+body{min-height:100vh}
+header{display:flex;align-items:baseline;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font:700 15px var(--mono);letter-spacing:.28em;text-transform:uppercase}
+header span{color:var(--dim)}
+header .keys{margin-left:auto;font-size:11px}
+main{display:grid;grid-template-columns:var(--lw,330px) 7px minmax(320px,1fr) 7px var(--rw,300px);gap:0;align-items:start}
+aside{padding:16px 18px;overflow-x:hidden;max-height:calc(100vh - 49px);overflow:auto;position:sticky;top:0;background:var(--panel)}
+aside.r{border:0}
+.split{position:sticky;top:0;height:calc(100vh - 49px);cursor:col-resize;touch-action:none;outline:0;z-index:2}
+.split::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:var(--line);transition:all .12s}
+.split:hover::after,.split.drag::after,.split:focus-visible::after{left:2px;width:3px;background:var(--red)}
+body.dragging{user-select:none;-webkit-user-select:none;cursor:col-resize}
+body.dragging *{cursor:col-resize!important}
+#stage{padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+#cv{width:min(100%,calc(100vh - 190px),900px);aspect-ratio:1;background:#000;box-shadow:0 0 0 1px var(--line),0 20px 60px #000;image-rendering:auto}
+h3{margin:18px 0 8px;font:700 10px var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
+h3:first-child{margin-top:0}
+h3::after{content:"";flex:1;border-top:1px solid var(--line)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+button,select,input[type=text],textarea{font:inherit;color:var(--ink);background:#14140f;border:1px solid var(--line);border-radius:0;padding:6px 8px}
+button{cursor:pointer;text-align:center}
+button:hover{border-color:var(--dim)}
+button.on{background:var(--ink);color:#000;border-color:var(--ink)}
+button.hot{background:var(--red);border-color:var(--red);color:#fff}
+.desc{color:var(--dim);margin:8px 0 0;font-size:11px}
+.row{display:grid;grid-template-columns:96px 1fr 34px;gap:8px;align-items:center;margin:6px 0}
+.row label{color:var(--dim)}
+.row.t{grid-template-columns:96px 1fr}
+.row input[type=range]{width:100%;accent-color:var(--red)}
+.row output{color:var(--dim);text-align:right;font-size:11px}
+.row select,.row input[type=text]{width:100%}
+.sw{display:flex;gap:5px;flex-wrap:wrap}
+.sw button{width:22px;height:22px;padding:0;border:1px solid #444}
+.sw button.on{outline:2px solid var(--ink);outline-offset:1px}
+.looks{display:flex;flex-wrap:wrap;gap:4px}
+.looks button{font-size:11px;padding:4px 7px}
+textarea{width:100%;min-height:84px;resize:vertical}
+.bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.bar button{padding:8px 12px}
+#lib{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.th{position:relative;aspect-ratio:1;border:1px solid var(--line);cursor:pointer;overflow:hidden;background:#000}
+.th img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.2)}
+.th:hover,.th.on{border-color:var(--red)}.th:hover img,.th.on img{filter:none}
+.th button{position:absolute;top:2px;width:20px;height:20px;padding:0;line-height:1;font-size:12px;background:#000c;border:0;display:none}
+.th .x{right:2px;color:#ff7a7a}.th .e{left:2px}.th:hover button{display:block}
+.th.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10px;text-align:center}
+#lib.selmode .th button{display:none!important}
+#lib.selmode .th[data-n]::after{content:"";position:absolute;right:3px;top:3px;width:12px;height:12px;border:1px solid var(--ink);background:#000a}
+#lib.selmode .th.sel::after{background:var(--red);border-color:var(--red)}
+#lib.selmode .th.sel{outline:2px solid var(--red);outline-offset:-2px}
+.libbar{display:flex;gap:4px;margin:0 0 8px}.libbar button{padding:4px 9px;font-size:11px}
+button:disabled{opacity:.4;cursor:default}
+[hidden]{display:none!important}
+#trashbox{margin:8px 0}#trashbox summary{cursor:pointer;color:var(--dim)}#trashcount{color:var(--ink)}
+#trashlist{display:grid;gap:4px;margin:6px 0}
+.tr{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:3px}
+.tr img{width:34px;height:34px;object-fit:cover}.tr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim)}
+.tr button{padding:3px 8px;font-size:11px}
+#libcount{color:var(--dim);font-weight:400;letter-spacing:0}
+#drop{border:1px dashed var(--dim);padding:14px;text-align:center;color:var(--dim);margin-bottom:8px;cursor:pointer}
+#drop.over{border-color:var(--red);color:var(--ink)}
+#bank{list-style:none;margin:0 0 8px;padding:0;max-height:320px;overflow:auto;border:1px solid var(--line)}
+#bank li{padding:5px 6px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--dim)}
+#bank li:hover{color:var(--ink);background:#14140f}
+#bank li{position:relative;padding:6px 44px 6px 7px}
+#bank li button{position:absolute;top:4px;width:18px;height:18px;padding:0;font-size:11px;line-height:1;background:#000c;border:0;display:none}
+#bank li .x{right:4px;color:#ff7a7a}#bank li .e{right:24px}#bank li:hover button{display:block}
+#bank li.empty{cursor:default;color:var(--dim);font-style:italic}#bank li.editing{padding:4px;cursor:default}
+.ledit{width:100%;resize:none;min-height:0}
+.addrow{display:flex;gap:4px;margin:0 0 6px;align-items:stretch}.addrow textarea{flex:1;min-height:0;height:48px;resize:none}
+.filt{width:100%;margin:0 0 6px}
+#bankcount{color:var(--dim);font-weight:400;letter-spacing:0}
+#bank li.on{color:var(--ink);box-shadow:inset 2px 0 var(--red)}
+details summary{cursor:pointer;color:var(--dim);margin:8px 0}
+#sheet{position:fixed;inset:0;background:#000d;display:none;overflow:auto;padding:26px;z-index:9}
+#sheet.show{display:block}
+#sheet .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;max-width:1100px;margin:16px auto}
+#sheet canvas{width:100%;aspect-ratio:1;cursor:pointer;box-shadow:0 0 0 1px var(--line)}
+#sheet canvas:hover{box-shadow:0 0 0 2px var(--red)}
+#msg{color:var(--dim);min-height:1.4em}
+@media(max-width:1000px){main{grid-template-columns:1fr}.split{display:none}aside{position:static;max-height:none;border:0}}
+</style>
+</head>
+<body>
+<header><h1>Cover Lab</h1><span>playlist covers, image only, made from your taste</span><span class="keys">S surprise · R reroll · D download</span></header>
+<main>
+  <aside id="left">
+    <h3>Look</h3><div class="tabs" id="tabs"></div><p class="desc" id="desc"></p>
+    <h3>Presets</h3><div class="looks" id="looks"></div>
+    <h3>Style</h3><div id="controls"></div>
+    <h3>Photo</h3><div id="photoc"></div>
+    <h3>Finish</h3><div id="fxc"></div>
+  </aside>
+  <div class="split" id="sp-l" role="separator" aria-orientation="vertical" tabindex="0" title="drag to resize · double-click to reset"></div>
+  <section id="stage">
+    <canvas id="cv" width="1024" height="1024"></canvas>
+    <div class="bar">
+      <button class="hot" id="b-surp">Surprise me</button>
+      <button id="b-seed">Reroll grain</button>
+      <button id="b-sheet">Contact sheet</button>
+      <button id="b-jpg">Download JPG 640</button>
+      <button id="b-png">PNG 1024</button>
+      <button id="b-copy">Copy</button>
+      <button id="b-save">Save to exports/</button>
+    </div>
+    <div id="msg"></div>
+  </section>
+  <div class="split" id="sp-r" role="separator" aria-orientation="vertical" tabindex="0" title="drag to resize · double-click to reset"></div>
+  <aside id="right" class="r">
+    <h3>Photos <span id="libcount"></span></h3>
+    <div id="drop">drop photos here, paste, or click<br><small>saved to your library</small><input type="file" id="file" accept="image/*" multiple hidden></div>
+    <div class="libbar"><button id="l-sel">Select</button><button id="l-all" hidden>All</button><button id="l-del" class="hot" hidden>Delete 0</button></div>
+    <div id="lib"></div>
+    <details id="trashbox"><summary>trash <span id="trashcount">0</span></summary><div id="trashlist"></div><div class="libbar"><button id="t-all">Restore all</button></div></details>
+    <h3>Mood lines <span id="bankcount"></span></h3>
+    <p class="desc">your writing sets the vibe: picking a line chooses a look, a photo and a mood. it is never printed on the cover.</p>
+    <div class="addrow"><textarea id="lineadd" rows="2" placeholder="write or paste a line, press Enter to add"></textarea><button id="l-add">Add</button></div>
+    <input type="text" id="linefilter" class="filt" placeholder="search my lines">
+    <ul id="bank"></ul>
+    <div class="libbar"><button id="b-rand">Random line</button><button id="b-reset">Reset</button></div>
+  </aside>
+</main>
+<div id="sheet"><div class="bar"><button id="sheet-more">8 more</button><button id="sheet-close">close</button></div><div class="grid" id="sheetgrid"></div></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# your photos: reference images are usually not yours to publish
+inspo/*
+!inspo/.gitkeep
+
+# local output and housekeeping
+exports/
+trash/
+activity.log
+__pycache__/
+*.pyc
+.DS_Store

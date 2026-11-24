@@ -1,0 +1,62 @@
+# Cover Lab
+
+A small local tool for making **playlist covers**: image only, no text. You bring photos and a taste; it gives you black stars, old tubes, photocopies, phosphor ASCII and film stills, all with grain, dust and glow.
+
+Everything runs on your machine. Nothing is uploaded anywhere.
+
+## Run it
+
+Needs only **Python 3** (standard library, nothing to install) and a browser (Chrome, Brave or Edge work best).
+
+```bash
+python3 server.py
+```
+
+It opens http://localhost:8765. On macOS you can also double-click **`Cover Lab.command`**.
+
+A local server is needed because browsers refuse to save a canvas that contains images opened straight from disk.
+
+## The five looks
+
+| Look | What it makes |
+|---|---|
+| **Star** | A photo or portrait cut into a rough-edged star. Presets: blackstar, bone, negative, blood, blue, ziggy (red and blue bolt), gray. |
+| **Screen** | A still on a small old tube in the dark: scanlines, glow, play and rec symbols, phosphor colours. |
+| **Xerox** | A photocopy: halftone dots, misregistration, copier shadow, tape. |
+| **Terminal** | Your photo drawn in phosphor characters (dots, blocks or slashes) on a curved tube. |
+| **Still** | A full-bleed film frame: letterbox, contact-print border, 16mm sprockets or porthole. |
+
+Every look has presets and sliders. **Finish** adds grain, dust and scratches, vignette, bloom, RGB split and tube curve to any of them.
+
+## Using it
+
+- **Surprise me** (`S`) picks a look, a photo and a mood. **Reroll grain** (`R`) keeps the look and changes the texture. **Contact sheet** shows eight at once; click one to edit it.
+- **Download JPG 640** (`D`) is the size Spotify wants. **PNG 1024** is the full-size version. **Save to exports/** writes into the `exports/` folder.
+- **Panels** can be resized by dragging their borders; double-click a border to reset it.
+
+### Photos
+
+Drop, paste or pick photos and they are saved into the `inspo/` folder. Hover a photo to rename (✎) or delete (×). **Select** lets you pick several. Deleting moves files to `trash/`, never erases them, and the **trash** list under the photos restores them.
+
+### Mood lines
+
+Your own sentences, used as *inspiration only*: picking a line chooses a look, a photo and a mood for the cover, and the same line always gives the same result. **The text is never printed on the cover.** Add, edit, delete and search lines from the panel. The ones that ship are starter lines in Spanish; replace them with yours.
+
+## Folders
+
+```
+index.html   the interface
+app.js       the drawing engine and the interface logic
+server.py    tiny local server (photo library, trash, saving exports)
+inspo/       your photos (git-ignored; add your own)
+exports/     covers you saved (created on first save, git-ignored)
+trash/       deleted photos (created on first delete, git-ignored)
+activity.log every add/delete/rename the server handled (git-ignored)
+```
+
+## Notes
+
+- The server only listens on `127.0.0.1`, so other machines on your network cannot reach it.
+- Photos you put in `inspo/` are not part of the repository on purpose. Check that you have the right to share any image before publishing it.
+- Settings, your lines and panel sizes are kept in your browser's local storage, so they stay with that browser.
+- No licence has been chosen yet. Add a `LICENSE` file before others reuse the code.
