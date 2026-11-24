@@ -511,7 +511,54 @@ function defaultState() {
 }
 let state = defaultState(), lib = [], bank = [], userImg = null; const imgCache = {};
 const loadUrl = url => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
-const libImg = async name => imgCache[name] || (imgCache[name] = await loadUrl('inspo/' + encodeURIComponent(name)));
+
+/* ---------- photo storage: the local Python server if there is one, otherwise this browser (IndexedDB) ---------- */
+const clean = n => { const m = String(n || 'photo').match(/^(.*?)(\.[A-Za-z0-9]+)?$/), stem = (m[1] || 'photo').replace(/[^\p{L}\p{N}\-_ ]/gu, '_').replace(/^[ _]+|[ _]+$/g, '') || 'photo'; return [stem, (m[2] || '').toLowerCase()]; };
+const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' };
+const uniq = (names, stem, ext) => { let n = stem + ext, i = 2; while (names.has(n)) n = `${stem}_${i++}${ext}`; return n; };
+const idb = (() => {
+  let p; const open = () => p || (p = new Promise((ok, no) => { const r = indexedDB.open('coverlab-photos', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos', { keyPath: 'name' }); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
+  const run = async (mode, f) => { const db = await open(); return new Promise((ok, no) => { const tx = db.transaction('photos', mode), st = tx.objectStore('photos'); const out = f(st); tx.oncomplete = () => ok(out && 'result' in out ? out.result : out); tx.onerror = () => no(tx.error); }); };
+  return { all: () => run('readonly', st => st.getAll()), put: v => run('readwrite', st => st.put(v)), del: k => run('readwrite', st => st.delete(k)), get: k => run('readonly', st => st.get(k)) };
+})();
+const urls = {};
+const blobUrl = (n, b) => urls[n] || (urls[n] = URL.createObjectURL(b));
+const Server = {
+  mode: 'server', canExport: true,
+  async list() { return (await fetch('/api/inspo')).json(); },
+  async trash() { return (await fetch('/api/trash')).json(); },
+  async add(f) { const r = await post('/api/upload?name=' + q(f.name || 'pasted.png'), { headers: { 'Content-Type': f.type }, body: f }); return r.name || null; },
+  async del(n) { const r = await post('/api/delete?name=' + q(n)); return r.trashed || null; },
+  async restore(n) { const r = await post('/api/restore?name=' + q(n)); return r.name || null; },
+  async rename(a, b) { const r = await post('/api/rename?from=' + q(a) + '&to=' + q(b)); return r.name || null; },
+  url: n => 'inspo/' + q(n), trashUrl: n => 'trash/' + q(n),
+  async image(n) { return loadUrl(this.url(n)); },
+};
+const Local = {
+  mode: 'local', canExport: false,
+  async rows() { return (await idb.all()).sort((a, b) => b.ts - a.ts); },
+  async list() { return (await this.rows()).filter(r => !r.trashed).map(r => r.name); },
+  async trash() { return (await this.rows()).filter(r => r.trashed).map(r => r.name); },
+  async add(f) {
+    const rows = await idb.all(), names = new Set(rows.map(r => r.name)); let [stem, ext] = clean(f.name || 'pasted.png'); if (!Object.values(EXT).includes(ext)) ext = EXT[f.type] || '.png';
+    const name = uniq(names, stem, ext); await idb.put({ name, blob: f, trashed: false, ts: Date.now() }); blobUrl(name, f); return name;
+  },
+  async del(n) { const r = await idb.get(n); if (!r) return null; r.trashed = true; r.ts = Date.now(); await idb.put(r); return n; },
+  async restore(n) { const r = await idb.get(n); if (!r) return null; r.trashed = false; r.ts = Date.now(); await idb.put(r); return n; },
+  async rename(a, b) {
+    const r = await idb.get(a); if (!r) return null; const names = new Set((await idb.all()).map(x => x.name)); const ext = (a.match(/\.[^.]+$/) || [''])[0], [stem] = clean(b), name = uniq(names, stem, ext);
+    await idb.del(a); delete urls[a]; r.name = name; await idb.put(r); blobUrl(name, r.blob); return name;
+  },
+  url: n => urls[n] || '', trashUrl: n => urls[n] || '',
+  async prime() { (await idb.all()).forEach(r => blobUrl(r.name, r.blob)); },
+  async image(n) { const r = await idb.get(n); if (!r) throw new Error('missing'); return loadUrl(blobUrl(n, r.blob)); },
+};
+let Store = Server;
+async function pickStore() {
+  try { const r = await fetch('/api/inspo'); if (r.ok && Array.isArray(await r.clone().json())) { Store = Server; return; } } catch { }
+  try { await Local.prime(); Store = Local; } catch { Store = null; }
+}
+const libImg = async name => imgCache[name] || (imgCache[name] = await Store.image(name));
 async function imgFor(st) { try { return st.src.kind === 'user' ? userImg : st.src.kind === 'lib' ? await libImg(st.src.name) : null; } catch { return null; } }
 
 function applyLook(st, look) {
@@ -615,14 +662,14 @@ const post = (url, opt = {}) => fetch(url, { method: 'POST', ...opt }).then(r =>
 const q = encodeURIComponent;
 function setLib(name) { state.src = { kind: 'lib', name }; build(); schedule(); }
 async function setFile(f) { if (!f || !f.type.startsWith('image/')) return; userImg = await loadUrl(URL.createObjectURL(f)); state.src = { kind: 'user' }; build(); schedule(); }
-async function refreshLib() { try { lib = await (await fetch('/api/inspo')).json(); } catch { } picked.forEach(n => { if (!lib.includes(n)) picked.delete(n); }); renderLib(); refreshTrash(); }
+async function refreshLib() { try { lib = Store ? await Store.list() : []; } catch { } picked.forEach(n => { if (!lib.includes(n)) picked.delete(n); }); renderLib(); refreshTrash(); }
 async function refreshTrash() {
-  let tr = []; try { tr = await (await fetch('/api/trash')).json(); } catch { }
+  let tr = []; try { tr = Store ? await Store.trash() : []; } catch { }
   $('#trashcount').textContent = tr.length; $('#t-all').hidden = !tr.length; const box = $('#trashlist'); box.innerHTML = '';
   if (!tr.length) { box.textContent = 'empty'; box.style.color = 'var(--dim)'; return; }
   tr.forEach(n => {
-    const row = document.createElement('div'); row.className = 'tr'; const im = document.createElement('img'); im.src = 'trash/' + q(n); const sp = document.createElement('span'); sp.textContent = n; sp.title = n;
-    const b = document.createElement('button'); b.textContent = 'restore'; b.onclick = async () => { await post('/api/restore?name=' + q(n)); await refreshLib(); msg('restored ' + n); };
+    const row = document.createElement('div'); row.className = 'tr'; const im = document.createElement('img'); im.src = Store.trashUrl(n); const sp = document.createElement('span'); sp.textContent = n; sp.title = n;
+    const b = document.createElement('button'); b.textContent = 'restore'; b.onclick = async () => { await Store.restore(n); await refreshLib(); msg('restored ' + n); };
     row.append(im, sp, b); box.append(row);
   });
 }
@@ -640,7 +687,7 @@ function renderLib() {
   const none = document.createElement('div'); none.className = 'th none'; none.textContent = 'no photo'; none.onclick = () => { state.src = { kind: 'none' }; build(); schedule(); }; host.append(none);
   lib.forEach(n => {
     const t = document.createElement('div'); t.className = 'th'; t.dataset.n = n; t.title = n;
-    const im = document.createElement('img'); im.src = 'inspo/' + q(n); im.loading = 'lazy'; t.append(im);
+    const im = document.createElement('img'); im.src = Store.url(n); im.loading = 'lazy'; t.append(im);
     const ed = document.createElement('button'); ed.className = 'e'; ed.textContent = '✎'; ed.title = 'rename'; ed.onclick = e => { e.stopPropagation(); renLib(n); };
     const dx = document.createElement('button'); dx.className = 'x'; dx.textContent = '×'; dx.title = 'delete'; dx.onclick = e => { e.stopPropagation(); delLib([n]); };
     t.append(ed, dx);
@@ -652,23 +699,23 @@ function renderLib() {
 async function addFiles(files) {
   const imgs = [...files].filter(f => f.type.startsWith('image/')); if (!imgs.length) return;
   let last = null, ok = 0;
-  for (const f of imgs) { try { const r = await post('/api/upload?name=' + q(f.name || 'pasted.png'), { headers: { 'Content-Type': f.type }, body: f }); if (r.name) { last = r.name; ok++; } } catch { } }
-  if (ok) { await refreshLib(); setLib(last); msg(`${ok} added to the library`); }
-  else { await setFile(imgs[0]); msg('library offline: photo used for this session only'); }
+  for (const f of imgs) { try { const n = Store && await Store.add(f); if (n) { last = n; ok++; } } catch { } }
+  if (ok) { await refreshLib(); setLib(last); msg(`${ok} added` + (Store.mode === 'local' ? ' to this browser' : ' to the library')); }
+  else { await setFile(imgs[0]); msg('could not save to the library: photo used for this session only'); }
 }
 async function delLib(names) {
   if (names.length >= 3 && !confirm(`Move ${names.length} photos to the trash? You can restore them from the trash list.`)) return;
   const done = [];
-  for (const n of names) { try { const r = await post('/api/delete?name=' + q(n)); if (r.trashed) { done.push(r.trashed); delete imgCache[n]; } } catch { } }
+  for (const n of names) { try { const r = await Store.del(n); if (r) { done.push(r); delete imgCache[n]; } } catch { } }
   if (!done.length) { msg('could not delete'); return; }
   picked.clear(); await refreshLib();
   if (state.src.kind === 'lib' && !lib.includes(state.src.name)) { state.src = lib.length ? { kind: 'lib', name: lib[0] } : { kind: 'none' }; build(); schedule(); }
-  msg(`deleted ${done.length}`, async () => { for (const n of done) await post('/api/restore?name=' + q(n)); await refreshLib(); msg('restored'); });
+  msg(`deleted ${done.length}`, async () => { for (const n of done) await Store.restore(n); await refreshLib(); msg('restored'); });
 }
 async function renLib(n) {
   const base = n.replace(/\.[^.]+$/, ''), to = prompt('Rename photo', base); if (!to || to === base) return;
-  const r = await post('/api/rename?from=' + q(n) + '&to=' + q(to)); if (!r.name) { msg('could not rename'); return; }
-  delete imgCache[n]; if (state.src.kind === 'lib' && state.src.name === n) state.src.name = r.name; await refreshLib(); save();
+  const r = await Store.rename(n, to); if (!r) { msg('could not rename'); return; }
+  delete imgCache[n]; if (state.src.kind === 'lib' && state.src.name === n) state.src.name = r; await refreshLib(); save();
 }
 function initLib() {
   const drop = $('#drop'), file = $('#file'); drop.onclick = () => file.click(); file.onchange = () => { addFiles(file.files); file.value = ''; };
@@ -679,7 +726,7 @@ function initLib() {
   $('#l-sel').onclick = () => { selMode = !selMode; if (!selMode) picked.clear(); updSel(); };
   $('#l-all').onclick = () => { lib.forEach(n => picked.add(n)); updSel(); };
   $('#l-del').onclick = () => { if (picked.size) delLib([...picked]); };
-  $('#t-all').onclick = async () => { const tr = await (await fetch('/api/trash')).json(); for (const n of tr) await post('/api/restore?name=' + q(n)); await refreshLib(); msg(`restored ${tr.length}`); };
+  $('#t-all').onclick = async () => { const tr = await Store.trash(); for (const n of tr) await Store.restore(n); await refreshLib(); msg(`restored ${tr.length}`); };
   initBank(); renderLib(); refreshTrash();
 }
 
@@ -718,7 +765,7 @@ function download(canvas, mime, name, q) { canvas.toBlob(b => { const a = docume
 $('#b-jpg').onclick = () => { const o = mk(640); const x = o.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cv, 0, 0, 640, 640); download(o, 'image/jpeg', slug() + '.jpg', .93); };
 $('#b-png').onclick = () => download(cv, 'image/png', slug() + '.png');
 $('#b-copy').onclick = () => cv.toBlob(async b => { try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); msg('copied to clipboard'); } catch { msg('copy blocked by the browser: use download'); } });
-$('#b-save').onclick = () => cv.toBlob(async b => { try { const r = await (await fetch('/api/save?name=' + encodeURIComponent(slug() + '.png'), { method: 'POST', body: b })).json(); msg('saved ' + r.saved); } catch { msg('could not save'); } }, 'image/png');
+$('#b-save').onclick = () => Store && Store.canExport ? cv.toBlob(async b => { try { const r = await (await fetch('/api/save?name=' + encodeURIComponent(slug() + '.png'), { method: 'POST', body: b })).json(); msg('saved ' + r.saved); } catch { msg('could not save'); } }, 'image/png') : $('#b-png').click();
 $('#b-surp').onclick = surprise; $('#b-seed').onclick = () => { state.seed = Math.floor(Math.random() * 1e9); schedule(); };
 window.addEventListener('keydown', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (e.key === 's') surprise(); else if (e.key === 'r') $('#b-seed').click(); else if (e.key === 'd') $('#b-jpg').click(); });
 
@@ -753,10 +800,12 @@ function load() {
   } catch { }
 }
 (async function boot() {
-  try { lib = await (await fetch('/api/inspo')).json(); } catch { lib = []; }
+  await pickStore(); try { lib = Store ? await Store.list() : []; } catch { lib = []; }
+  if (!Store || !Store.canExport) { const sv = $('#b-save'); if (sv) sv.hidden = true; }
   try { bank = JSON.parse(localStorage.getItem('coverlab.bank') || 'null'); } catch { }
   if (!bank || !bank.length) bank = BANK0.split('\n');
   load(); if (state.src.kind === 'lib' && !lib.includes(state.src.name)) state.src = lib.length ? { kind: 'lib', name: lib[0] } : { kind: 'none' };
   if (state.src.kind === 'none' && !localStorage.getItem('coverlab.v1') && lib.length) state.src = { kind: 'lib', name: lib[0] };   // first run: start with the newest photo
   initLib(); build(); drawBank(); schedule();
+  if (Store && Store.mode === 'local') $('#libwhere').textContent = 'saved in this browser only';
 })();
