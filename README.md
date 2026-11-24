@@ -1,8 +1,19 @@
 # Cover Lab
 
+By [donovan](https://donovan-website.vercel.app/) · source: https://github.com/daywave/cover-maker
+
 A small local tool for making **playlist covers**: image only, no text. You bring photos and a taste; it gives you black stars, old tubes, photocopies, phosphor ASCII and film stills, all with grain, dust and glow.
 
 Everything runs on your machine. Nothing is uploaded anywhere.
+
+## Examples
+
+Five covers made with **Surprise me**, one per look. Each one is a different style, photo and grain, and every cover is image only.
+
+| | | | | |
+|---|---|---|---|---|
+| ![Star](docs/examples/example-1-star.jpg) | ![Screen](docs/examples/example-2-screen.jpg) | ![Terminal](docs/examples/example-3-terminal.jpg) | ![Xerox](docs/examples/example-4-xerox.jpg) | ![Still](docs/examples/example-5-still.jpg) |
+| Star | Screen | Terminal | Xerox | Still |
 
 ## Run it
 

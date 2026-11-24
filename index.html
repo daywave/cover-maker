@@ -13,6 +13,9 @@ header{display:flex;align-items:baseline;gap:14px;padding:14px 20px;border-botto
 header h1{margin:0;font:700 15px var(--mono);letter-spacing:.28em;text-transform:uppercase}
 header span{color:var(--dim)}
 header .keys{margin-left:auto;font-size:11px}
+.links{display:flex;gap:14px;margin-left:18px;font-size:11px}
+.links a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+.links a:hover{color:var(--ink);border-color:var(--red)}
 main{display:grid;grid-template-columns:var(--lw,330px) 7px minmax(320px,1fr) 7px var(--rw,300px);gap:0;align-items:start}
 aside{padding:16px 18px;overflow-x:hidden;max-height:calc(100vh - 49px);overflow:auto;position:sticky;top:0;background:var(--panel)}
 aside.r{border:0}
@@ -88,11 +91,12 @@ details summary{cursor:pointer;color:var(--dim);margin:8px 0}
 #sheet canvas{width:100%;aspect-ratio:1;cursor:pointer;box-shadow:0 0 0 1px var(--line)}
 #sheet canvas:hover{box-shadow:0 0 0 2px var(--red)}
 #msg{color:var(--dim);min-height:1.4em}
+.foot{color:var(--dim);font-size:11px;margin-top:8px}.foot a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}.foot a:hover{border-color:var(--red)}
 @media(max-width:1000px){main{grid-template-columns:1fr}.split{display:none}aside{position:static;max-height:none;border:0}}
 </style>
 </head>
 <body>
-<header><h1>Cover Lab</h1><span>playlist covers, image only, made from your taste</span><span class="keys">S surprise · R reroll · D download</span></header>
+<header><h1>Cover Lab</h1><span>playlist covers, image only, made from your taste</span><span class="keys">S surprise · R reroll · D download</span><nav class="links"><a href="https://github.com/daywave/cover-maker" target="_blank" rel="noopener">repo</a><a href="https://donovan-website.vercel.app/" target="_blank" rel="noopener">donovan ↗</a></nav></header>
 <main>
   <aside id="left">
     <h3>Look</h3><div class="tabs" id="tabs"></div><p class="desc" id="desc"></p>
@@ -114,6 +118,7 @@ details summary{cursor:pointer;color:var(--dim);margin:8px 0}
       <button id="b-save">Save to exports/</button>
     </div>
     <div id="msg"></div>
+    <footer class="foot">made by <a href="https://donovan-website.vercel.app/" target="_blank" rel="noopener">donovan</a> · source on <a href="https://github.com/daywave/cover-maker" target="_blank" rel="noopener">github</a></footer>
   </section>
   <div class="split" id="sp-r" role="separator" aria-orientation="vertical" tabindex="0" title="drag to resize · double-click to reset"></div>
   <aside id="right" class="r">
