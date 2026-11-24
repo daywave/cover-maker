@@ -769,6 +769,17 @@ $('#b-save').onclick = () => Store && Store.canExport ? cv.toBlob(async b => { t
 $('#b-surp').onclick = surprise; $('#b-seed').onclick = () => { state.seed = Math.floor(Math.random() * 1e9); schedule(); };
 window.addEventListener('keydown', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (e.key === 's') surprise(); else if (e.key === 'r') $('#b-seed').click(); else if (e.key === 'd') $('#b-jpg').click(); });
 
+/* ---------- reset settings (undoable) ---------- */
+function resetSettings(all) {
+  const before = clone(state), d = defaultState();
+  if (all) state.p = d.p; else state.p[state.style] = d.p[state.style];
+  state.fx = { ...FX_DEF }; state.photo = { ...d.photo };
+  build(); schedule();
+  msg(all ? 'all looks reset' : `${STYLES[state.style].name} reset`, () => { state.p = before.p; state.fx = before.fx; state.photo = before.photo; state.style = before.style; build(); schedule(); msg('settings restored'); });
+}
+$('#r-style').onclick = () => resetSettings(false);
+$('#r-all').onclick = () => { if (confirm('Reset every look to its defaults?')) resetSettings(true); };
+
 /* ---------- draggable panel borders ---------- */
 (function splitters() {
   const root = document.documentElement, main = $('main'), DEF = { lw: 330, rw: 300 }, MIN = 200, MAX = 640;
