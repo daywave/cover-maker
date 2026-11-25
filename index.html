@@ -4,37 +4,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cover Lab</title>
-<style>
-:root{--bg:#090908;--panel:#0f0f0d;--line:#262520;--ink:#e9e2cf;--dim:#8d8775;--red:#cf1620;--blue:#2a2ae0;--mono:Menlo,Monaco,"Courier New",monospace}
+<style>:root{--bg:#090908;--panel:#0e0e0c;--panel2:#12120f;--line:#25241f;--line2:#34322b;--ink:#e9e2cf;--dim:#8d8775;--red:#cf1620;--mono:Menlo,Monaco,"Courier New",monospace}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.45 var(--mono)}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.5 var(--mono)}
 body{min-height:100vh}
-header{display:flex;align-items:baseline;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
-header h1{margin:0;font:700 15px var(--mono);letter-spacing:.28em;text-transform:uppercase}
-header span{color:var(--dim)}
-header .keys{margin-left:auto;font-size:11px}
-.links{display:flex;gap:14px;margin-left:18px;font-size:11px}
-.links a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+::selection{background:var(--red);color:#fff}
+header{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--line);height:49px}
+header h1{margin:0;font:700 14px var(--mono);letter-spacing:.3em;text-transform:uppercase}
+header h1 b{color:var(--red)}
+header .tag{color:var(--dim)}
+header .keys{margin-left:auto;font-size:11px;color:var(--dim);display:flex;gap:10px;align-items:center}
+kbd{font:inherit;font-size:10px;border:1px solid var(--line2);border-bottom-width:2px;padding:0 5px;color:var(--ink)}
+.links{display:flex;gap:14px;margin-left:8px;font-size:11px}
+.links a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line2);padding-bottom:1px}
 .links a:hover{color:var(--ink);border-color:var(--red)}
-main{display:grid;grid-template-columns:var(--lw,330px) 7px minmax(320px,1fr) 7px var(--rw,300px);gap:0;align-items:start}
-aside{padding:16px 18px;overflow-x:hidden;max-height:calc(100vh - 49px);overflow:auto;position:sticky;top:0;background:var(--panel)}
-aside.r{border:0}
+main{display:grid;grid-template-columns:var(--lw,330px) 7px minmax(320px,1fr) 7px var(--rw,300px);align-items:start}
+aside{padding:6px 16px 28px;overflow-x:hidden;max-height:calc(100vh - 49px);overflow-y:auto;position:sticky;top:0;background:var(--panel);scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
 .split{position:sticky;top:0;height:calc(100vh - 49px);cursor:col-resize;touch-action:none;outline:0;z-index:2}
 .split::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:var(--line);transition:all .12s}
 .split:hover::after,.split.drag::after,.split:focus-visible::after{left:2px;width:3px;background:var(--red)}
 body.dragging{user-select:none;-webkit-user-select:none;cursor:col-resize}
 body.dragging *{cursor:col-resize!important}
-#stage{padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
-#cv{width:min(100%,calc(100vh - 190px),900px);aspect-ratio:1;background:#000;box-shadow:0 0 0 1px var(--line),0 20px 60px #000;image-rendering:auto}
-h3{margin:18px 0 8px;font:700 10px var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
-h3:first-child{margin-top:0}
-h3::after{content:"";flex:1;border-top:1px solid var(--line)}
+/* sections */
+details.sec{border-bottom:1px solid var(--line);padding:2px 0 10px}
+details.sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 0 8px;font:700 10px var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--dim);user-select:none}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"";width:0;height:0;border-left:5px solid var(--dim);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .12s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary:hover{color:var(--ink)}
+details.sec>summary .n{color:var(--dim);font-weight:400;letter-spacing:0;margin-left:auto}
+.sub{font:700 10px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-button,select,input[type=text],textarea{font:inherit;color:var(--ink);background:#14140f;border:1px solid var(--line);border-radius:0;padding:6px 8px}
+.tabs button.on{box-shadow:inset 0 -2px var(--red)}
+button,select,input[type=text],textarea{font:inherit;color:var(--ink);background:#15150f;border:1px solid var(--line);border-radius:0;padding:6px 8px;transition:border-color .1s,background .1s}
 button{cursor:pointer;text-align:center}
-button:hover{border-color:var(--dim)}
+button:hover{border-color:var(--dim);background:#1b1b14}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:1px solid var(--red);outline-offset:1px}
 button.on{background:var(--ink);color:#000;border-color:var(--ink)}
 button.hot{background:var(--red);border-color:var(--red);color:#fff}
+button.hot:hover{background:#e0212c}
+button:disabled{opacity:.35;cursor:default}
 .desc{color:var(--dim);margin:8px 0 0;font-size:11px}
 .row{display:grid;grid-template-columns:96px 1fr 34px;gap:8px;align-items:center;margin:6px 0}
 .row label{color:var(--dim)}
@@ -48,12 +57,29 @@ button.hot{background:var(--red);border-color:var(--red);color:#fff}
 .looks{display:flex;flex-wrap:wrap;gap:4px}
 .looks button{font-size:11px;padding:4px 7px}
 textarea{width:100%;min-height:84px;resize:vertical}
-.bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.libbar{display:flex;gap:4px;margin:0 0 8px}.libbar button{padding:4px 9px;font-size:11px}
+[hidden]{display:none!important}
+/* stage */
+#stage{padding:20px 20px 28px;display:flex;flex-direction:column;align-items:center;gap:12px}
+#cv{width:min(100%,calc(100vh - 250px),900px);aspect-ratio:1;background:#000;box-shadow:0 0 0 1px var(--line2),0 24px 70px #000}
+#moodbar{display:flex;align-items:center;gap:8px;min-height:22px;color:var(--dim);font-size:11px;max-width:min(100%,900px);text-align:center;justify-content:center;flex-wrap:wrap}
+#moodbar i{width:9px;height:9px;border-radius:50%;flex:none}
+#moodbar b{color:var(--ink);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:10px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
 .bar button{padding:8px 12px}
+.bar .arrow{padding:8px 10px;min-width:34px}
+.bar.exp{border-top:1px solid var(--line);padding-top:12px;margin-top:2px;min-width:min(100%,520px)}
+.bar .lbl{color:var(--dim);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-right:4px}
+.foot{color:var(--dim);font-size:11px;margin-top:6px}.foot a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}.foot a:hover{border-color:var(--red)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:#17170f;border:1px solid var(--line2);box-shadow:0 10px 40px #000;padding:9px 12px;z-index:30;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;max-width:90vw}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#toast button{margin-left:8px;padding:2px 9px;font-size:11px}
+/* photos */
 #lib{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .th{position:relative;aspect-ratio:1;border:1px solid var(--line);cursor:pointer;overflow:hidden;background:#000}
-.th img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.2)}
+.th img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.25) brightness(.9);transition:filter .12s}
 .th:hover,.th.on{border-color:var(--red)}.th:hover img,.th.on img{filter:none}
+.th.on{box-shadow:inset 0 0 0 1px var(--red)}
 .th button{position:absolute;top:2px;width:20px;height:20px;padding:0;line-height:1;font-size:12px;background:#000c;border:0;display:none}
 .th .x{right:2px;color:#ff7a7a}.th .e{left:2px}.th:hover button{display:block}
 .th.none{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10px;text-align:center}
@@ -61,80 +87,101 @@ textarea{width:100%;min-height:84px;resize:vertical}
 #lib.selmode .th[data-n]::after{content:"";position:absolute;right:3px;top:3px;width:12px;height:12px;border:1px solid var(--ink);background:#000a}
 #lib.selmode .th.sel::after{background:var(--red);border-color:var(--red)}
 #lib.selmode .th.sel{outline:2px solid var(--red);outline-offset:-2px}
-.libbar{display:flex;gap:4px;margin:0 0 8px}.libbar button{padding:4px 9px;font-size:11px}
-button:disabled{opacity:.4;cursor:default}
-[hidden]{display:none!important}
-#trashbox{margin:8px 0}#trashbox summary{cursor:pointer;color:var(--dim)}#trashcount{color:var(--ink)}
+#drop{border:1px dashed var(--line2);padding:12px;text-align:center;color:var(--dim);margin-bottom:8px;cursor:pointer;transition:all .12s}
+#drop:hover,#drop.over{border-color:var(--red);color:var(--ink);background:#14100f}
+#drop small{font-size:10px}
+#trashbox{margin:8px 0 0}#trashbox summary{cursor:pointer;color:var(--dim)}#trashcount{color:var(--ink)}
 #trashlist{display:grid;gap:4px;margin:6px 0}
 .tr{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:3px}
 .tr img{width:34px;height:34px;object-fit:cover}.tr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim)}
 .tr button{padding:3px 8px;font-size:11px}
-#libcount{color:var(--dim);font-weight:400;letter-spacing:0}
-#drop{border:1px dashed var(--dim);padding:14px;text-align:center;color:var(--dim);margin-bottom:8px;cursor:pointer}
-#drop.over{border-color:var(--red);color:var(--ink)}
-#bank{list-style:none;margin:0 0 8px;padding:0;max-height:320px;overflow:auto;border:1px solid var(--line)}
-#bank li{padding:5px 6px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--dim)}
-#bank li:hover{color:var(--ink);background:#14140f}
-#bank li{position:relative;padding:6px 44px 6px 7px}
-#bank li button{position:absolute;top:4px;width:18px;height:18px;padding:0;font-size:11px;line-height:1;background:#000c;border:0;display:none}
-#bank li .x{right:4px;color:#ff7a7a}#bank li .e{right:24px}#bank li:hover button{display:block}
-#bank li.empty{cursor:default;color:var(--dim);font-style:italic}#bank li.editing{padding:4px;cursor:default}
-.ledit{width:100%;resize:none;min-height:0}
+/* mood lines */
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px}
+.chip{font-size:10px;padding:3px 8px;display:flex;align-items:center;gap:5px;letter-spacing:.04em}
+.chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.chip small{color:var(--dim);font-size:10px}.chip.on small{color:#333}
 .addrow{display:flex;gap:4px;margin:0 0 6px;align-items:stretch}.addrow textarea{flex:1;min-height:0;height:48px;resize:none}
 .filt{width:100%;margin:0 0 6px}
-#bankcount{color:var(--dim);font-weight:400;letter-spacing:0}
-#bank li.on{color:var(--ink);box-shadow:inset 2px 0 var(--red)}
-details summary{cursor:pointer;color:var(--dim);margin:8px 0}
-#sheet{position:fixed;inset:0;background:#000d;display:none;overflow:auto;padding:26px;z-index:9}
+#bank{list-style:none;margin:0 0 8px;padding:0;max-height:340px;overflow:auto;border:1px solid var(--line);scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+#bank li{position:relative;padding:7px 46px 7px 26px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--dim)}
+#bank li:last-child{border-bottom:0}
+#bank li:hover{color:var(--ink);background:#14140f}
+#bank li.on{color:var(--ink);box-shadow:inset 2px 0 var(--red);background:#14120f}
+#bank li .mt{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-top:2px}
+#bank li .dot{position:absolute;left:6px;top:9px;width:11px;height:11px;border-radius:50%;padding:0;border:0;background:var(--c)}
+#bank li .dot.auto{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}
+#bank li .dot:hover{transform:scale(1.25)}
+#bank li button.e,#bank li button.x{position:absolute;top:4px;width:18px;height:18px;padding:0;font-size:11px;line-height:1;background:#000c;border:0;display:none}
+#bank li .x{right:4px;color:#ff7a7a}#bank li .e{right:24px}#bank li:hover button.e,#bank li:hover button.x{display:block}
+#bank li.empty{cursor:default;color:var(--dim);font-style:italic;padding-left:8px}#bank li.editing{padding:4px;cursor:default}
+.ledit{width:100%;resize:none;min-height:0}
+/* contact sheet */
+#sheet{position:fixed;inset:0;background:#000d;display:none;overflow:auto;padding:26px;z-index:20}
 #sheet.show{display:block}
 #sheet .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;max-width:1100px;margin:16px auto}
-#sheet canvas{width:100%;aspect-ratio:1;cursor:pointer;box-shadow:0 0 0 1px var(--line)}
-#sheet canvas:hover{box-shadow:0 0 0 2px var(--red)}
-#msg{color:var(--dim);min-height:1.4em}
-.foot{color:var(--dim);font-size:11px;margin-top:8px}.foot a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}.foot a:hover{border-color:var(--red)}
-@media(max-width:1000px){main{grid-template-columns:1fr}.split{display:none}aside{position:static;max-height:none;border:0}}
+#sheet canvas{width:100%;aspect-ratio:1;cursor:pointer;box-shadow:0 0 0 1px var(--line2);transition:transform .12s}
+#sheet canvas:hover{box-shadow:0 0 0 2px var(--red);transform:translateY(-2px)}
+@media(max-width:1000px){main{grid-template-columns:1fr}.split{display:none}aside{position:static;max-height:none}#cv{width:min(100%,640px)}header .tag,header .keys kbd{display:none}}
 </style>
 </head>
 <body>
-<header><h1>Cover Lab</h1><span>playlist covers, image only, made from your taste</span><span class="keys">S surprise · R reroll · D download</span><nav class="links"><a href="https://github.com/daywave/cover-maker" target="_blank" rel="noopener">repo</a><a href="https://donovan-website.vercel.app/" target="_blank" rel="noopener">donovan ↗</a></nav></header>
+<header>
+  <h1>Cover <b>Lab</b></h1><span class="tag">playlist covers, image only, made from your taste</span>
+  <span class="keys"><span><kbd>S</kbd> surprise</span><span><kbd>←</kbd><kbd>→</kbd> history</span><span><kbd>R</kbd> grain</span><span><kbd>D</kbd> download</span></span>
+  <nav class="links"><a href="https://github.com/daywave/cover-maker" target="_blank" rel="noopener">repo</a><a href="https://donovan-website.vercel.app/" target="_blank" rel="noopener">donovan ↗</a></nav>
+</header>
 <main>
   <aside id="left">
-    <h3>Look</h3><div class="tabs" id="tabs"></div><p class="desc" id="desc"></p>
-    <h3>Presets</h3><div class="looks" id="looks"></div>
-    <h3>Style</h3><div class="libbar"><button id="r-style" title="reset this look's sliders, photo adjustments and finish">Reset style</button><button id="r-all" title="reset every look">Reset all</button></div><div id="controls"></div>
-    <h3>Photo</h3><div id="photoc"></div>
-    <h3>Finish</h3><div id="fxc"></div>
+    <details class="sec" open data-s="look"><summary>Look</summary>
+      <div class="tabs" id="tabs"></div><p class="desc" id="desc"></p>
+      <div class="sub">Presets</div><div class="looks" id="looks"></div>
+    </details>
+    <details class="sec" open data-s="style"><summary>Style</summary>
+      <div class="libbar"><button id="r-style" title="reset this look's sliders, photo adjustments and finish">Reset style</button><button id="r-all" title="reset every look">Reset all</button></div>
+      <div id="controls"></div>
+    </details>
+    <details class="sec" open data-s="photo"><summary>Photo framing</summary><div id="photoc"></div></details>
+    <details class="sec" open data-s="finish"><summary>Finish</summary><div id="fxc"></div></details>
   </aside>
   <div class="split" id="sp-l" role="separator" aria-orientation="vertical" tabindex="0" title="drag to resize · double-click to reset"></div>
   <section id="stage">
     <canvas id="cv" width="1024" height="1024"></canvas>
+    <div id="moodbar"></div>
     <div class="bar">
-      <button class="hot" id="b-surp">Surprise me</button>
-      <button id="b-seed">Reroll grain</button>
+      <button class="arrow" id="b-back" title="previous cover (←)" disabled>‹</button>
+      <button class="hot" id="b-surp" title="a random line of yours, with its mood (S)">Surprise me</button>
+      <button class="arrow" id="b-fwd" title="next cover (→)" disabled>›</button>
+      <button id="b-seed" title="same look, new grain (R)">Reroll grain</button>
       <button id="b-sheet">Contact sheet</button>
-      <button id="b-jpg">Download JPG 640</button>
+    </div>
+    <div class="bar exp">
+      <span class="lbl">export</span>
+      <button id="b-jpg" title="640 px, the size Spotify wants (D)">JPG 640</button>
       <button id="b-png">PNG 1024</button>
       <button id="b-copy">Copy</button>
       <button id="b-save">Save to exports/</button>
     </div>
-    <div id="msg"></div>
     <footer class="foot">made by <a href="https://donovan-website.vercel.app/" target="_blank" rel="noopener">donovan</a> · source on <a href="https://github.com/daywave/cover-maker" target="_blank" rel="noopener">github</a></footer>
   </section>
   <div class="split" id="sp-r" role="separator" aria-orientation="vertical" tabindex="0" title="drag to resize · double-click to reset"></div>
-  <aside id="right" class="r">
-    <h3>Photos <span id="libcount"></span></h3>
-    <div id="drop">drop photos here, paste, or click<br><small><span id="libwhere">saved to your library</span></small><input type="file" id="file" accept="image/*" multiple hidden></div>
-    <div class="libbar"><button id="l-sel">Select</button><button id="l-all" hidden>All</button><button id="l-del" class="hot" hidden>Delete 0</button></div>
-    <div id="lib"></div>
-    <details id="trashbox"><summary>trash <span id="trashcount">0</span></summary><div id="trashlist"></div><div class="libbar"><button id="t-all">Restore all</button></div></details>
-    <h3>Mood lines <span id="bankcount"></span></h3>
-    <p class="desc">your writing sets the vibe: picking a line chooses a look, a photo and a mood. it is never printed on the cover.</p>
-    <div class="addrow"><textarea id="lineadd" rows="2" placeholder="write or paste a line, press Enter to add"></textarea><button id="l-add">Add</button></div>
-    <input type="text" id="linefilter" class="filt" placeholder="search my lines">
-    <ul id="bank"></ul>
-    <div class="libbar"><button id="b-rand">Random line</button><button id="b-reset">Reset</button></div>
+  <aside id="right">
+    <details class="sec" open data-s="photos"><summary>Photos <span class="n" id="libcount"></span></summary>
+      <div id="drop">drop photos here, paste, or click<br><small><span id="libwhere">saved to your library</span></small><input type="file" id="file" accept="image/*" multiple hidden></div>
+      <div class="libbar"><button id="l-sel">Select</button><button id="l-all" hidden>All</button><button id="l-del" class="hot" hidden>Delete 0</button></div>
+      <div id="lib"></div>
+      <details id="trashbox"><summary>trash <span id="trashcount">0</span></summary><div id="trashlist"></div><div class="libbar"><button id="t-all">Restore all</button></div></details>
+    </details>
+    <details class="sec" open data-s="lines"><summary>Mood lines <span class="n" id="bankcount"></span></summary>
+      <p class="desc" style="margin:0 0 8px">each line has a mood: the one you tag (click the dot), or one read from its words. the mood picks the look, colors, grain and how dark the photo is. the words are never printed on the cover.</p>
+      <div class="chips" id="moodchips"></div>
+      <div class="addrow"><textarea id="lineadd" rows="2" placeholder="write or paste a line, press Enter to add"></textarea><button id="l-add">Add</button></div>
+      <input type="text" id="linefilter" class="filt" placeholder="search my lines">
+      <ul id="bank"></ul>
+      <div class="libbar"><button id="b-rand">Random line</button><button id="b-reset">Reset</button></div>
+    </details>
   </aside>
 </main>
+<div id="toast" role="status" aria-live="polite"></div>
 <div id="sheet"><div class="bar"><button id="sheet-more">8 more</button><button id="sheet-close">close</button></div><div class="grid" id="sheetgrid"></div></div>
 <script src="app.js"></script>
 </body>

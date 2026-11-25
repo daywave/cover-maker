@@ -51,7 +51,17 @@ Drop, paste or pick photos and they are saved into the `inspo/` folder. Hover a 
 
 ### Mood lines
 
-Your own sentences, used as *inspiration only*: picking a line chooses a look, a photo and a mood for the cover, and the same line always gives the same result. **The text is never printed on the cover.** Add, edit, delete and search lines from the panel. The ones that ship are starter lines in Spanish; replace them with yours.
+Your own sentences steer the cover without ever appearing on it. Every line has a **mood**: *sad, tender, angry, nostalgic, lonely* or *dreamy*.
+
+- **Where the mood comes from:** the one you tag (click the colored dot on a line to cycle through them), otherwise one read from the words (for example "recuerdo" reads as nostalgic, "extraño" as sad, "luz" as dreamy), otherwise a repeatable pick. The small label under each line says which.
+- **What the mood does:** it chooses the look and preset, the colors, how much grain, dust and bloom there is, and whether the photo is a dark or a light one.
+- **Repeatable:** clicking the same line gives the same cover. **Random line** and **Surprise me** use a fresh seed.
+- **Manage them:** add (Enter), paste several at once, edit, delete with undo, search, and filter by mood with the chips.
+- The words are **never printed** on the cover. The shipped lines are Spanish starters; replace them with yours.
+
+### Moving around
+
+**Surprise me** keeps a history: use the ‹ › buttons or the left and right arrow keys to step back to a cover you liked. **Reset style** and **Reset all** put the sliders back (with undo). Sections in the side panels collapse, and the panel borders can be dragged.
 
 ## Folders
 

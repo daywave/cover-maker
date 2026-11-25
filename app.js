@@ -507,7 +507,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 function defaultState() {
   const p = {}; for (const id in STYLES) { p[id] = {}; STYLES[id].schema.forEach(d => p[id][d.k] = d.v); }
-  return { style: 'star', seed: 7, mood: '', src: { kind: 'none' }, photo: { zoom: 1, px: 0, py: 0, flip: false }, fx: { ...FX_DEF }, p };
+  return { style: 'star', seed: 7, mood: '', moodKey: '', moodWhy: '', src: { kind: 'none' }, photo: { zoom: 1, px: 0, py: 0, flip: false }, fx: { ...FX_DEF }, p };
 }
 let state = defaultState(), lib = [], bank = [], userImg = null; const imgCache = {};
 const loadUrl = url => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
@@ -599,70 +599,145 @@ function rowOf(def, obj, onchange) {
 function fill(host, schema, obj, onchange) { host.innerHTML = ''; schema.forEach(d => host.append(rowOf(d, obj, onchange))); }
 function build() {
   const tabs = $('#tabs'); tabs.innerHTML = '';
-  Object.values(STYLES).forEach(st => { const b = document.createElement('button'); b.textContent = st.name; if (st.id === state.style) b.classList.add('on'); b.onclick = () => { state.style = st.id; build(); schedule(); }; tabs.append(b); });
+  Object.values(STYLES).forEach(st => { const b = document.createElement('button'); b.textContent = st.name; if (st.id === state.style) b.classList.add('on'); b.onclick = () => { state.style = st.id; state.mood = state.moodKey = ''; build(); schedule(); }; tabs.append(b); });
   const st = STYLES[state.style]; $('#desc').textContent = st.desc;
-  const lk = $('#looks'); lk.innerHTML = ''; st.looks.forEach(l => { const b = document.createElement('button'); b.textContent = l.n; b.onclick = () => { applyLook(state, l); build(); schedule(); }; lk.append(b); });
+  const lk = $('#looks'); lk.innerHTML = ''; st.looks.forEach(l => { const b = document.createElement('button'); b.textContent = l.n; b.onclick = () => { applyLook(state, l); state.mood = state.moodKey = ''; build(); schedule(); }; lk.append(b); });
   fill($('#controls'), st.schema, state.p[state.style]); fill($('#photoc'), PHOTO_SCHEMA, state.photo); fill($('#fxc'), FX_SCHEMA, state.fx);
-  markOn();
+  markOn(); updMoodBar();
+}
+function updMoodBar() {
+  const bar = $('#moodbar'), k = state.moodKey, M = MOODS[k]; if (!bar) return;
+  const why = { tag: 'your tag', words: 'read from the words', auto: 'picked for you' }[state.moodWhy] || '';
+  bar.innerHTML = M ? `<i style="background:${M.c}"></i><b>${k}</b><span>${why}${state.mood ? ' · from “' + state.mood.replace(/</g, '&lt;').slice(0, 70) + (state.mood.length > 70 ? '…' : '') + '”' : ''}</span>` : `<i style="background:#555"></i><b>manual</b><span>${STYLES[state.style].name} look</span>`;
 }
 function msg(t, undo) {
-  const m = $('#msg'); m.textContent = t + ' '; clearTimeout(msg.t);
-  if (undo) { const b = document.createElement('button'); b.textContent = 'undo'; b.onclick = () => { clearTimeout(msg.t); m.textContent = ''; undo(); }; m.append(b); }
-  msg.t = setTimeout(() => m.textContent = '', undo ? 10000 : 2600);
+  const m = $('#toast'); m.textContent = t + ' '; m.classList.add('show'); clearTimeout(msg.t);
+  const hide = () => { m.classList.remove('show'); m.textContent = ''; };
+  if (undo) { const b = document.createElement('button'); b.textContent = 'undo'; b.onclick = () => { clearTimeout(msg.t); hide(); undo(); }; m.append(b); }
+  msg.t = setTimeout(hide, undo ? 10000 : 2600);
 }
 
 /* ---------- bank, photos ---------- */
-/* ---------- mood lines: add / edit / delete (undoable) / search ---------- */
-let lineFilter = '';
-const saveBank = () => { try { localStorage.setItem('coverlab.bank', JSON.stringify(bank)); } catch { } };
+/* ---------- moods: what a line actually does ---------- */
+/* A line has a mood: the one you tag, else one read from its words, else a repeatable pick. The mood chooses the look, its colours,
+   how grainy and dusty it is and how dark the photo is. The sentence itself is never drawn. */
+const MOODS = {
+  sad:       { c: '#4a74b8', dark: 1,   fx: { grain: .5, dust: .4, vig: .45, bloom: .1 }, looks: { star: ['negative', 'gray', 'blue'], screen: ['blue static', 'tiny'], still: ['blue hour', 'porthole', 'noir'], terminal: ['cold'], xerox: ['dark room'], disc: ['film disc', 'jewel'], collage: ['night'] } },
+  tender:    { c: '#e0b48a', dark: 0,   fx: { grain: .4, dust: .3, vig: .2, bloom: .25 },  looks: { star: ['bone', 'gray'], still: ['contact print', '16mm'], screen: ['amber'], collage: ['bone zine', 'pink bolts'], xerox: ['zine'], disc: ['star disc', 'acid disc'] } },
+  angry:     { c: '#cf1620', dark: .7, fx: { grain: .55, dust: .5, vig: .3, bloom: 0, chroma: 2 }, looks: { star: ['blood', 'ziggy', 'blackstar'], xerox: ['red toner', 'noir copy'], terminal: ['red'], still: ['harsh'], collage: ['red cut'], disc: ['red star'] } },
+  nostalgic: { c: '#d29a4a', dark: .4, fx: { grain: .55, dust: .6, vig: .35, bloom: .15 }, looks: { still: ['16mm', 'contact print'], xerox: ['zine'], screen: ['amber', 'film still'], terminal: ['amber'], collage: ['bone zine'], disc: ['copy disc', 'film disc'], star: ['bone'] } },
+  lonely:    { c: '#8d9aa8', dark: 1,   fx: { grain: .4, dust: .3, vig: .5, bloom: .1 },  looks: { still: ['porthole', 'noir', 'harsh'], star: ['negative', 'blackstar'], screen: ['tiny', 'film still'], terminal: ['cold', 'green'], xerox: ['dark room'], disc: ['bare disc'] } },
+  dreamy:    { c: '#c27ee0', dark: .2, fx: { grain: .3, dust: .25, vig: .2, bloom: .4, chroma: 2 }, looks: { collage: ['acid', 'pink bolts', 'blue ink'], disc: ['acid disc', 'jewel'], screen: ['blue static'], star: ['ziggy', 'blue'], terminal: ['blocks', 'cold'], still: ['blue hour'] } },
+};
+const MOOD_KEYS = Object.keys(MOODS);
+const KEYWORDS = {
+  sad: /extran|lament|dolor|duel|triste|soledad|perd|adios|despedid|ausenc|nunca|llor|pena|cicatriz|miss|sad|cry|lost|goodbye|grief/,
+  tender: /\bamo\b|amor|quer|quise|carin|abraz|mano|labio|\bvoz\b|regal|gracias|ternura|sonri|hermos|gentle|love|tender|gift|hands|kiss|beso/,
+  angry: /rabia|enoj|\bira\b|odio|grit|discus|lastim|culpa|error|hiri|espina|furia|angry|hate|scream|hurt|rage/,
+  nostalgic: /recuerd|memoria|tarde|infancia|\banos\b|tiempo|breve|\bvida\b|antes|viej|pasado|ayer|nostal|remember|memory|time|years|past/,
+  lonely: /noche|silenci|vacio|dentro|ojos|mirar|sin que|\bsolo\b|lluvia|ventana|distancia|lonely|night|silence|empty|alone|rain|window/,
+  dreamy: /suen|\bluz\b|jardin|flor|cielo|imagin|posib|universo|estrella|pelicula|godard|cine|dream|light|star|film|garden|sky/,
+};
+const norm = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function moodOf(item) {
+  if (item.m && MOODS[item.m]) return { key: item.m, why: 'tag' };
+  const t = norm(item.t); let best = null, bs = 0;
+  for (const k of MOOD_KEYS) { const n = (t.match(new RegExp(KEYWORDS[k].source, 'g')) || []).length; if (n > bs) { bs = n; best = k; } }
+  return best ? { key: best, why: 'words' } : { key: MOOD_KEYS[hashStr(item.t) % MOOD_KEYS.length], why: 'auto' };
+}
+const photoLum = {};                                           // name -> 0 (black) .. 1 (white), used so dark moods get dark photos
+async function computeLums() {
+  for (const n of lib) { if (n in photoLum || !Store) continue; try { const im = await libImg(n), c = mk(12), x = c.getContext('2d'); x.drawImage(im, 0, 0, 12, 12); const d = x.getImageData(0, 0, 12, 12).data; let a = 0; for (let i = 0; i < d.length; i += 4) a += .299 * d[i] + .587 * d[i + 1] + .114 * d[i + 2]; photoLum[n] = a / (d.length / 4) / 255; } catch { } }
+}
+function wpick(items, w, rnd) { const tot = w.reduce((a, b) => a + b, 0); let r = rnd() * tot; for (let i = 0; i < items.length; i++) { r -= w[i]; if (r <= 0) return items[i]; } return items[items.length - 1]; }
+function moodState(key, rnd, keep) {
+  const M = MOODS[key], st = defaultState(), ids = Object.keys(M.looks);
+  const id = wpick(ids, ids.map(k => M.looks[k].length), rnd); st.style = id; st.seed = Math.floor(rnd() * 1e9);
+  const look = STYLES[id].looks.find(l => l.n === pick(M.looks[id], rnd)) || pick(STYLES[id].looks, rnd); applyLook(st, look);
+  const P = st.p[id]; STYLES[id].schema.forEach(d => { if (d.t === 'r' && rnd() < .4) { const v = P[d.k] + (rnd() - .5) * (d.max - d.min) * .2; P[d.k] = clamp(Math.round(v / d.step) * d.step, d.min, d.max); } });
+  for (const k of ['grain', 'dust', 'vig', 'bloom']) st.fx[k] = +(((st.fx[k] || 0) + (M.fx[k] || 0)) / 2).toFixed(2); st.fx.chroma = Math.max(st.fx.chroma || 0, M.fx.chroma || 0);
+  const real = lib.filter(n => !n.startsWith('star_')), pool = real.length && rnd() < .85 ? real : lib;
+  st.src = pool.length ? { kind: 'lib', name: wpick(pool, pool.map(n => n in photoLum ? .15 + Math.pow(1 - Math.abs(M.dark - (1 - photoLum[n])), 2) : .6), rnd) } : { kind: 'none' };
+  if (keep && keep.src.kind === 'user') st.src = keep.src;       // never swap away a photo you brought yourself
+  st.photo = { zoom: 1 + rnd() * .7, px: (rnd() - .5) * .6, py: (rnd() - .5) * .6, flip: rnd() < .3 };
+  st.moodKey = key; return st;
+}
+
+/* ---------- history: step back and forward through the covers you generated ---------- */
+const undoStack = [], redoStack = [];
+function updHist() { $('#b-back').disabled = !undoStack.length; $('#b-fwd').disabled = !redoStack.length; }
+function go(st) { undoStack.push(clone(state)); if (undoStack.length > 40) undoStack.shift(); redoStack.length = 0; state = st; build(); drawBank(); schedule(); updHist(); }
+function histMove(from, to) { if (!from.length) return; to.push(clone(state)); state = from.pop(); build(); drawBank(); schedule(); updHist(); }
+const histBack = () => histMove(undoStack, redoStack), histFwd = () => histMove(redoStack, undoStack);
+
+/* ---------- mood lines: add / edit / tag / delete (undoable) / search / filter ---------- */
+let lineFilter = '', moodFilter = '';
+const saveBank = () => { try { localStorage.setItem('coverlab.bank2', JSON.stringify(bank)); } catch { } };
 const mkBtn = (txt, cls, title) => { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.title = title; return b; };
+const BANK_ITEMS = () => BANK0.split('\n').map(t => ({ t, m: '' }));
+function loadBank() {
+  let b = null; try { b = JSON.parse(localStorage.getItem('coverlab.bank2') || 'null'); } catch { }
+  if (!b) { try { const old = JSON.parse(localStorage.getItem('coverlab.bank') || 'null'); if (Array.isArray(old)) b = old.map(t => ({ t: String(t), m: '' })); } catch { } }
+  return Array.isArray(b) && b.length ? b.filter(x => x && x.t).map(x => ({ t: String(x.t), m: MOODS[x.m] ? x.m : '' })) : BANK_ITEMS();
+}
+function drawChips() {
+  const host = $('#moodchips'); host.innerHTML = ''; const counts = {}; bank.forEach(it => { const k = moodOf(it).key; counts[k] = (counts[k] || 0) + 1; });
+  const mk1 = (k, label, col) => { const b = document.createElement('button'); b.className = 'chip' + (moodFilter === k ? ' on' : ''); b.innerHTML = (col ? `<i style="background:${col}"></i>` : '') + label + (k ? ` <small>${counts[k] || 0}</small>` : ''); b.onclick = () => { moodFilter = moodFilter === k ? '' : k; drawBank(); }; host.append(b); };
+  mk1('', 'all'); MOOD_KEYS.forEach(k => mk1(k, k, MOODS[k].c));
+}
 function drawBank() {
-  const ul = $('#bank'); ul.innerHTML = ''; $('#bankcount').textContent = bank.length;
+  const ul = $('#bank'); ul.innerHTML = ''; $('#bankcount').textContent = bank.length; drawChips();
   const f = lineFilter.toLowerCase(); let shown = 0;
-  bank.forEach((t, idx) => {
-    if (f && !t.toLowerCase().includes(f)) return; shown++;
-    const li = document.createElement('li'); if (t === state.mood) li.classList.add('on');
-    const sp = document.createElement('span'); sp.textContent = t; li.append(sp);
+  bank.forEach((it, idx) => {
+    const mo = moodOf(it); if ((f && !it.t.toLowerCase().includes(f)) || (moodFilter && mo.key !== moodFilter)) return; shown++;
+    const li = document.createElement('li'); if (it.t === state.mood) li.classList.add('on');
+    const dot = document.createElement('button'); dot.className = 'dot' + (mo.why === 'tag' ? '' : ' auto'); dot.style.setProperty('--c', MOODS[mo.key].c); dot.title = `${mo.key} (${mo.why === 'tag' ? 'your tag' : mo.why === 'words' ? 'read from the words' : 'picked for you'}): click to change`;
+    dot.onclick = ev => { ev.stopPropagation(); const order = ['', ...MOOD_KEYS], at = order.indexOf(it.m); it.m = order[(at + 1) % order.length]; saveBank(); drawBank(); };
+    const sp = document.createElement('span'); sp.textContent = it.t; const tag = document.createElement('small'); tag.className = 'mt'; tag.textContent = mo.key + (mo.why === 'tag' ? '' : ' ·auto');
     const e = mkBtn('✎', 'e', 'edit'), x = mkBtn('×', 'x', 'delete');
     e.onclick = ev => { ev.stopPropagation(); editLine(idx, li); }; x.onclick = ev => { ev.stopPropagation(); delLine(idx); };
-    li.append(e, x); li.onclick = () => fromLine(t); ul.append(li);
+    li.append(dot, sp, tag, e, x); li.onclick = () => pickLine(it); ul.append(li);
   });
   if (!shown) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = bank.length ? 'no match' : 'no lines yet: write one above'; ul.append(li); }
 }
 function addLines(raw) {
-  const ls = raw.split(/\n+/).map(x => x.trim()).filter(Boolean).filter((x, i, a) => !bank.includes(x) && a.indexOf(x) === i); if (!ls.length) return 0;
-  bank.unshift(...ls); saveBank(); drawBank(); msg(`${ls.length} line${ls.length > 1 ? 's' : ''} added`); return ls.length;
+  const ls = raw.split(/\n+/).map(x => x.trim()).filter(Boolean).filter((x, i, a) => !bank.some(b => b.t === x) && a.indexOf(x) === i); if (!ls.length) return 0;
+  bank.unshift(...ls.map(t => ({ t, m: '' }))); saveBank(); drawBank(); msg(`${ls.length} line${ls.length > 1 ? 's' : ''} added`); return ls.length;
 }
 function delLine(idx) {
-  const [t] = bank.splice(idx, 1); saveBank(); drawBank();
-  msg('line deleted', () => { bank.splice(idx, 0, t); saveBank(); drawBank(); msg('restored'); });
+  const [it] = bank.splice(idx, 1); saveBank(); drawBank();
+  msg('line deleted', () => { bank.splice(idx, 0, it); saveBank(); drawBank(); msg('restored'); });
 }
 function editLine(idx, li) {
-  const old = bank[idx], inp = document.createElement('textarea'); inp.value = old; inp.rows = Math.min(5, Math.ceil(old.length / 34)); inp.className = 'ledit';
+  const old = bank[idx].t, inp = document.createElement('textarea'); inp.value = old; inp.rows = Math.min(5, Math.ceil(old.length / 34)); inp.className = 'ledit';
   li.innerHTML = ''; li.classList.add('editing'); li.append(inp); li.onclick = null; inp.focus(); inp.select();
   let done = false; const end = commit => {
     if (done) return; done = true; const v = inp.value.trim();
-    if (commit && v && v !== old && !bank.includes(v)) { bank[idx] = v; if (state.mood === old) state.mood = v; saveBank(); }
+    if (commit && v && v !== old && !bank.some(b => b.t === v)) { bank[idx].t = v; if (state.mood === old) state.mood = v; saveBank(); }
     drawBank();
   };
   inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); end(true); } else if (e.key === 'Escape') end(false); };
   inp.onblur = () => end(true);
 }
 function initBank() {
-  const add = $('#lineadd'), go = () => { if (addLines(add.value)) add.value = ''; add.focus(); };
-  add.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } }; $('#l-add').onclick = go;
+  const add = $('#lineadd'), go2 = () => { if (addLines(add.value)) add.value = ''; add.focus(); };
+  add.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go2(); } }; $('#l-add').onclick = go2;
   $('#linefilter').oninput = e => { lineFilter = e.target.value.trim(); drawBank(); };
-  $('#b-rand').onclick = () => { if (bank.length) fromLine(pick(bank, Math.random)); };
-  $('#b-reset').onclick = () => { if (confirm('Put back your original lines and remove the ones you added?')) { bank = BANK0.split('\n'); saveBank(); drawBank(); msg('original lines restored'); } };
+  $('#b-rand').onclick = () => { if (bank.length) pickLine(pick(bank, Math.random), true); };
+  $('#b-reset').onclick = () => { if (confirm('Put back your original lines (and their moods) and remove the ones you added?')) { bank = BANK_ITEMS(); saveBank(); drawBank(); msg('original lines restored'); } };
 }
-function fromLine(t) { state = randomState(rngFrom(hashStr(t)), state); state.mood = t; build(); drawBank(); schedule(); }
+/* a line decides the cover: same line, same cover (unless `fresh`) */
+function pickLine(it, fresh) {
+  const mo = moodOf(it), st = moodState(mo.key, fresh ? rngFrom(Math.floor(Math.random() * 1e9)) : rngFrom(hashStr(it.t)), state);
+  st.mood = it.t; st.moodWhy = mo.why; go(st);
+}
 /* ---------- photo library: add / delete (to trash, undoable) / rename / multi-select ---------- */
 let selMode = false; const picked = new Set();
 const post = (url, opt = {}) => fetch(url, { method: 'POST', ...opt }).then(r => r.json());
 const q = encodeURIComponent;
 function setLib(name) { state.src = { kind: 'lib', name }; build(); schedule(); }
 async function setFile(f) { if (!f || !f.type.startsWith('image/')) return; userImg = await loadUrl(URL.createObjectURL(f)); state.src = { kind: 'user' }; build(); schedule(); }
-async function refreshLib() { try { lib = Store ? await Store.list() : []; } catch { } picked.forEach(n => { if (!lib.includes(n)) picked.delete(n); }); renderLib(); refreshTrash(); }
+async function refreshLib() { try { lib = Store ? await Store.list() : []; computeLums(); } catch { } picked.forEach(n => { if (!lib.includes(n)) picked.delete(n); }); renderLib(); refreshTrash(); }
 async function refreshTrash() {
   let tr = []; try { tr = Store ? await Store.trash() : []; } catch { }
   $('#trashcount').textContent = tr.length; $('#t-all').hidden = !tr.length; const box = $('#trashlist'); box.innerHTML = '';
@@ -730,20 +805,12 @@ function initLib() {
   initBank(); renderLib(); refreshTrash();
 }
 
-/* ---------- surprise: pick a look, a photo and a line of your own, the way you'd pick them ---------- */
-function randomState(rnd, keep) {
-  const st = defaultState(), ids = ['star', 'screen', 'xerox', 'terminal', 'still', 'collage', 'disc'], w = [.25, .15, .11, .1, .14, .12, .13]; let r = rnd(), id = ids[0];
-  for (let i = 0; i < ids.length; i++) { if (r < w[i]) { id = ids[i]; break; } r -= w[i]; }
-  st.style = id; st.seed = Math.floor(rnd() * 1e9); applyLook(st, pick(STYLES[id].looks, rnd));
-  const P = st.p[id]; STYLES[id].schema.forEach(d => { if (d.t === 'r' && rnd() < .45) { const v = P[d.k] + (rnd() - .5) * (d.max - d.min) * .22; P[d.k] = clamp(Math.round(v / d.step) * d.step, d.min, d.max); } });
-  const real = lib.filter(n => !n.startsWith('star_')), pool = rnd() < .8 && real.length ? real : lib;
-  st.src = pool.length ? { kind: 'lib', name: pick(pool, rnd) } : { kind: 'none' };
-  if (keep && keep.src.kind === 'user') st.src = keep.src;       // never swap away a photo you brought yourself
-  st.photo = { zoom: 1 + rnd() * .7, px: (rnd() - .5) * .6, py: (rnd() - .5) * .6, flip: rnd() < .3 };
-  if (bank.length) st.mood = pick(bank, rnd);
-  return st;
+/* ---------- surprise: a random line of yours, with its mood ---------- */
+function randomFromLines(keep) {
+  const it = bank.length ? pick(bank, Math.random) : null, mo = it ? moodOf(it) : { key: pick(MOOD_KEYS, Math.random), why: 'auto' };
+  const st = moodState(mo.key, rngFrom(Math.floor(Math.random() * 1e9)), keep); st.mood = it ? it.t : ''; st.moodWhy = mo.why; return st;
 }
-async function surprise() { const line = pick(bank, Math.random); state = randomState(Math.random, state); if (line) state.mood = line; build(); drawBank(); schedule(); }
+async function surprise() { go(randomFromLines(state)); }
 
 /* ---------- contact sheet ---------- */
 let sheetSnaps = [];
@@ -751,8 +818,8 @@ async function sheetMore() {
   const grid = $('#sheetgrid'); grid.innerHTML = ''; sheetSnaps = [];
   const off = mk(S), oc = off.getContext('2d', { willReadFrequently: true });
   for (let i = 0; i < 8; i++) {
-    const st = randomState(Math.random, state), t = mk(256); await renderState(oc, st); t.getContext('2d').drawImage(off, 0, 0, 256, 256);
-    t.onclick = () => { state = st; $('#sheet').classList.remove('show'); build(); drawBank(); schedule(); }; grid.append(t); sheetSnaps.push(st);
+    const st = randomFromLines(state), t = mk(256); await renderState(oc, st); t.getContext('2d').drawImage(off, 0, 0, 256, 256);
+    t.onclick = () => { $('#sheet').classList.remove('show'); go(st); }; grid.append(t); sheetSnaps.push(st);
     await new Promise(r => setTimeout(r, 0));
   }
 }
@@ -768,6 +835,14 @@ $('#b-copy').onclick = () => cv.toBlob(async b => { try { await navigator.clipbo
 $('#b-save').onclick = () => Store && Store.canExport ? cv.toBlob(async b => { try { const r = await (await fetch('/api/save?name=' + encodeURIComponent(slug() + '.png'), { method: 'POST', body: b })).json(); msg('saved ' + r.saved); } catch { msg('could not save'); } }, 'image/png') : $('#b-png').click();
 $('#b-surp').onclick = surprise; $('#b-seed').onclick = () => { state.seed = Math.floor(Math.random() * 1e9); schedule(); };
 window.addEventListener('keydown', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; if (e.key === 's') surprise(); else if (e.key === 'r') $('#b-seed').click(); else if (e.key === 'd') $('#b-jpg').click(); });
+
+/* ---------- history buttons, keys, collapsible sections ---------- */
+$('#b-back').onclick = histBack; $('#b-fwd').onclick = histFwd;
+window.addEventListener('keydown', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return; if (e.key === 'ArrowLeft') histBack(); else if (e.key === 'ArrowRight') histFwd(); });
+(function sections() {
+  let open = {}; try { open = JSON.parse(localStorage.getItem('coverlab.sec') || '{}'); } catch { }
+  document.querySelectorAll('details.sec').forEach(d => { const k = d.dataset.s; if (k in open) d.open = open[k]; d.addEventListener('toggle', () => { open[k] = d.open; try { localStorage.setItem('coverlab.sec', JSON.stringify(open)); } catch { } }); });
+})();
 
 /* ---------- reset settings (undoable) ---------- */
 function resetSettings(all) {
@@ -813,10 +888,9 @@ function load() {
 (async function boot() {
   await pickStore(); try { lib = Store ? await Store.list() : []; } catch { lib = []; }
   if (!Store || !Store.canExport) { const sv = $('#b-save'); if (sv) sv.hidden = true; }
-  try { bank = JSON.parse(localStorage.getItem('coverlab.bank') || 'null'); } catch { }
-  if (!bank || !bank.length) bank = BANK0.split('\n');
+  bank = loadBank();
   load(); if (state.src.kind === 'lib' && !lib.includes(state.src.name)) state.src = lib.length ? { kind: 'lib', name: lib[0] } : { kind: 'none' };
   if (state.src.kind === 'none' && !localStorage.getItem('coverlab.v1') && lib.length) state.src = { kind: 'lib', name: lib[0] };   // first run: start with the newest photo
-  initLib(); build(); drawBank(); schedule();
+  initLib(); build(); drawBank(); schedule(); updHist(); computeLums();
   if (Store && Store.mode === 'local') $('#libwhere').textContent = 'saved in this browser only';
 })();
