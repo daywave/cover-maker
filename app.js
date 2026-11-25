@@ -14,20 +14,7 @@ const lumHex = h => { const [r, g, b] = hex2rgb(h); return .299 * r + .587 * g +
 const HAS_FILTER = 'filter' in CanvasRenderingContext2D.prototype;
 
 const PAL = { black: '#0b0b0a', ink: '#17140f', night: '#07120e', bone: '#e9e2cf', white: '#f5f3ee', red: '#cf1620', blue: '#1a1ad8', green: '#6dff8f', amber: '#ffb43c', ice: '#a9c8ea', acid: '#3cff4f', pink: '#ff58a8' };
-const BANK0 = `Qué breve es la vida y qué largo puede ser un recuerdo.
-Hay personas que no desaparecen: se vuelven parte de la manera en que uno recuerda el mundo.
-Es extraño extrañar un lugar en el que nunca has vivido.
-Hay regalos que no terminan cuando se entregan.
-Uno no sabe cuándo está viviendo un recuerdo.
-Hay personas que se sienten como una película de Godard.
-Hay cosas que uno aprende a mirar con los ojos de adentro.
-Gracias por hacerme más humano, lamento no haberlo sido contigo.
-Cuánto de alguien puede quedarse en uno sin que ese alguien lo sepa.
-Tu voz, tus ojos, tus manos, tus labios.
-Pero deja intactas algunas cosas.
-Después abriría la mano.
-Te extraño.
-Y es la tuya.`;
+/* no lines ship with the tool: the lines are yours */
 
 /* ---------- canvas helpers ---------- */
 const rr = (c, x, y, w, h, r) => { r = Math.min(r, w / 2, h / 2); c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
@@ -674,7 +661,7 @@ const histBack = () => histMove(undoStack, redoStack), histFwd = () => histMove(
 let lineFilter = '', moodFilter = '';
 const saveBank = () => { try { localStorage.setItem('coverlab.bank2', JSON.stringify(bank)); } catch { } };
 const mkBtn = (txt, cls, title) => { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.title = title; return b; };
-const BANK_ITEMS = () => BANK0.split('\n').map(t => ({ t, m: '' }));
+const BANK_ITEMS = () => [];
 function loadBank() {
   let b = null; try { b = JSON.parse(localStorage.getItem('coverlab.bank2') || 'null'); } catch { }
   if (!b) { try { const old = JSON.parse(localStorage.getItem('coverlab.bank') || 'null'); if (Array.isArray(old)) b = old.map(t => ({ t: String(t), m: '' })); } catch { } }
@@ -698,7 +685,7 @@ function drawBank() {
     e.onclick = ev => { ev.stopPropagation(); editLine(idx, li); }; x.onclick = ev => { ev.stopPropagation(); delLine(idx); };
     li.append(dot, sp, tag, e, x); li.onclick = () => pickLine(it); ul.append(li);
   });
-  if (!shown) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = bank.length ? 'no match' : 'no lines yet: write one above'; ul.append(li); }
+  if (!shown) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = bank.length ? 'no match' : 'no lines yet. write one above: its words decide the mood (try "te extraño" or "recuerdo"), or tag it yourself.'; ul.append(li); }
 }
 function addLines(raw) {
   const ls = raw.split(/\n+/).map(x => x.trim()).filter(Boolean).filter((x, i, a) => !bank.some(b => b.t === x) && a.indexOf(x) === i); if (!ls.length) return 0;
@@ -723,8 +710,8 @@ function initBank() {
   const add = $('#lineadd'), go2 = () => { if (addLines(add.value)) add.value = ''; add.focus(); };
   add.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go2(); } }; $('#l-add').onclick = go2;
   $('#linefilter').oninput = e => { lineFilter = e.target.value.trim(); drawBank(); };
-  $('#b-rand').onclick = () => { if (bank.length) pickLine(pick(bank, Math.random), true); };
-  $('#b-reset').onclick = () => { if (confirm('Put back your original lines (and their moods) and remove the ones you added?')) { bank = BANK_ITEMS(); saveBank(); drawBank(); msg('original lines restored'); } };
+  $('#b-rand').onclick = () => { if (bank.length) pickLine(pick(bank, Math.random), true); else msg('write a line first'); };
+  $('#b-reset').onclick = () => { if (!bank.length) return; if (confirm(`Remove all ${bank.length} lines?`)) { const old = bank; bank = []; saveBank(); drawBank(); msg('all lines removed', () => { bank = old; saveBank(); drawBank(); msg('restored'); }); } };
 }
 /* a line decides the cover: same line, same cover (unless `fresh`) */
 function pickLine(it, fresh) {

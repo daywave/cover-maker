@@ -57,7 +57,7 @@ Your own sentences steer the cover without ever appearing on it. Every line has 
 - **What the mood does:** it chooses the look and preset, the colors, how much grain, dust and bloom there is, and whether the photo is a dark or a light one.
 - **Repeatable:** clicking the same line gives the same cover. **Random line** and **Surprise me** use a fresh seed.
 - **Manage them:** add (Enter), paste several at once, edit, delete with undo, search, and filter by mood with the chips.
-- The words are **never printed** on the cover. The shipped lines are Spanish starters; replace them with yours.
+- The words are **never printed** on the cover. The tool ships with no lines: it starts empty and works with whatever you write (Spanish and English words are recognized).
 
 ### Moving around
 
